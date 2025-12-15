@@ -64,10 +64,31 @@ export const alarm = {
     }
 }
 
-export const gpio = {
-    getPins: async () => {
-        const response = await api.get('/gpio/pins')
+export const cameras = {
+    // Get all cameras for the authenticated user
+    getAll: async () => {
+        const response = await api.get('/cameras')
         return response.data
+    },
+    // Add a new camera
+    add: async (cameraData) => {
+        const response = await api.post('/cameras', cameraData)
+        return response.data
+    },
+    // Delete a camera
+    delete: async (cameraId) => {
+        const response = await api.delete(`/cameras/${cameraId}`)
+        return response.data
+    },
+    // Get snapshot URL (proxied through backend)
+    getSnapshotUrl: (cameraId) => {
+        const token = localStorage.getItem('token')
+        return `${API_URL}/cameras/${cameraId}/snapshot?token=${token}`
+    },
+    // Get MJPEG stream URL (proxied through backend)
+    getStreamUrl: (cameraId) => {
+        const token = localStorage.getItem('token')
+        return `${API_URL}/cameras/${cameraId}/stream?token=${token}`
     }
 }
 
