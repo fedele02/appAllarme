@@ -12,12 +12,69 @@ import Contacts from './pages/Contacts'
 import Settings from './pages/Settings'
 import MainLayout from './layouts/MainLayout'
 
-// Simple protected route component
+import { useState, useEffect } from 'react'
+
+// Simple protected route component with token verification
 const ProtectedRoute = ({ children }) => {
+  const [isVerifying, setIsVerifying] = useState(true)
+  const [isValid, setIsValid] = useState(false)
   const token = localStorage.getItem('token')
-  if (!token) {
+
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (!token) {
+        setIsVerifying(false)
+        setIsValid(false)
+        return
+      }
+
+      try {
+        // Verify token with backend
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://unexploitative-emmalyn-unroosting.ngrok-free.dev/api'}/auth/verify`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'ngrok-skip-browser-warning': 'true'
+          }
+        })
+
+        if (response.ok) {
+          setIsValid(true)
+        } else {
+          // Token expired or invalid
+          alert('⚠️ Sessione scaduta\n\nDevi effettuare nuovamente il login.')
+          localStorage.removeItem('token')
+          localStorage.removeItem('username')
+          setIsValid(false)
+        }
+      } catch (error) {
+        console.error('Token verification error:', error)
+        // Network error - allow access but log error
+        setIsValid(true)
+      } finally {
+        setIsVerifying(false)
+      }
+    }
+
+    verifyToken()
+  }, [token])
+
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background-dark">
+        <div className="flex flex-col items-center gap-4">
+          <span className="material-symbols-outlined text-6xl text-primary animate-spin">
+            progress_activity
+          </span>
+          <p className="text-white text-lg">Verifica sessione...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isValid) {
     return <Navigate to="/login" replace />
   }
+
   return children
 }
 
