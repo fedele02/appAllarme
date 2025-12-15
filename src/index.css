@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #135bec;
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #101622;
+  --color-surface-dark: #192233;
+  --color-border-dark: #324467;
+  --color-card-dark: #192233;
+  --color-text-secondary: #92a4c9;
+
+  --font-display: "Manrope", sans-serif;
+  --font-sans: "Manrope", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply antialiased font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white transition-colors duration-300;
+  }
+}
