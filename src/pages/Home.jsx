@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { alarm } from '../lib/api'
+import NotificationService from '../services/NotificationService'
 
 
 export default function Home() {
@@ -18,13 +19,6 @@ export default function Home() {
     const checkStatus = async () => {
         try {
             const data = await alarm.getStatus()
-            // Strict check: if data exists and alarm_status is 'disarmed', then isArmed = false.
-            // Otherwise, if data is missing or status is anything else, assume armed or default to false if error?
-            // If data is missing (fetch error caught below), isArmed stays at initial state (false).
-            // But if data comes back with missing field, data.alarm_status is undefined. undefined !== 'disarmed' is true. 
-            // So we show ARMED if property is missing.
-            // Better to check for explicit 'armed' status if we knew it separately, but "alarm_status" is the key.
-            // Let's use optional chaining and strict comparison.
             const status = data?.alarm_status?.toLowerCase()
             setIsArmed(status !== 'disarmed' && status !== undefined)
         } catch (error) {
@@ -39,8 +33,6 @@ export default function Home() {
         try {
             const result = isArmed ? await alarm.disarm() : await alarm.arm()
             if (result.success) {
-                // Optimistic update or wait for next poll?
-                // Result has message "Allarme inserito..."
                 checkStatus() // Force refresh
             } else {
                 alert('Operazione fallita')
@@ -50,6 +42,15 @@ export default function Home() {
             alert('Errore nel cambiare stato allarme')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleTestAlarm = () => {
+        console.log('🔔 handleTestAlarm called in Home.jsx')
+        try {
+            NotificationService.sendTestNotification()
+        } catch (error) {
+            console.error('❌ Error in handleTestAlarm:', error)
         }
     }
 
@@ -88,7 +89,16 @@ export default function Home() {
                     </span>
                 </button>
 
-                <div className="pt-10 flex flex-col items-center animate-fade-in">
+                {/* Test Alarm Button */}
+                <button
+                    onClick={handleTestAlarm}
+                    className="mt-6 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 active:scale-95"
+                >
+                    <span className="material-symbols-outlined">notifications_active</span>
+                    TEST ALLARME
+                </button>
+
+                <div className="pt-6 flex flex-col items-center animate-fade-in">
                     <div className={`p-3 rounded-2xl flex items-center gap-3 ${isArmed ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
                         <span className="material-symbols-outlined">
                             {isArmed ? 'security' : 'verified_user'}

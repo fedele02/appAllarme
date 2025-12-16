@@ -11,8 +11,20 @@ import AlarmScreen from './pages/AlarmScreen'
 import Contacts from './pages/Contacts'
 import Settings from './pages/Settings'
 import MainLayout from './layouts/MainLayout'
+import NotificationService from './services/NotificationService'
+import AlarmCountdown from './pages/AlarmCountdown'
 
 import { useState, useEffect } from 'react'
+
+// Initialize notifications when app loads
+const initializeNotifications = async () => {
+  try {
+    await NotificationService.initialize()
+    console.log('Notification service initialized')
+  } catch (error) {
+    console.error('Error initializing notifications:', error)
+  }
+}
 
 // Simple protected route component with token verification
 const ProtectedRoute = ({ children }) => {
@@ -79,6 +91,10 @@ const ProtectedRoute = ({ children }) => {
 }
 
 function App() {
+  useEffect(() => {
+    initializeNotifications()
+  }, [])
+
   return (
     <BrowserRouter>
       <Routes>
@@ -101,6 +117,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
         </Route>
 
+        <Route path="/alarm-countdown" element={<AlarmCountdown />} />
         <Route path="/alarm" element={<AlarmScreen />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />

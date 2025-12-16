@@ -1,72 +1,226 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import AlarmSoundService from '../services/AlarmSoundService'
 
 export default function AlarmScreen() {
     const navigate = useNavigate()
+    const [alarmData, setAlarmData] = useState(null)
+
+    // Dual sliders state
+    const [leftSlidePos, setLeftSlidePos] = useState(0) // 0-100
+    const [rightSlidePos, setRightSlidePos] = useState(0) // 0-100
+    const [activeSlider, setActiveSlider] = useState(null) // 'left' or 'right'
+
+    const leftStartX = useRef(0)
+    const rightStartX = useRef(0)
+    const threshold = 85 // % to complete
+
+    useEffect(() => {
+        const pendingAlarmData = sessionStorage.getItem('pendingAlarm')
+        if (pendingAlarmData) {
+            try {
+                const data = JSON.parse(pendingAlarmData)
+                sessionStorage.removeItem('pendingAlarm')
+                setAlarmData(data)
+                AlarmSoundService.start()
+            } catch (error) {
+                console.error('Error:', error)
+            }
+        }
+
+        return () => {
+            AlarmSoundService.stop()
+        }
+    }, [])
+
+    // Left slider (Entra app)
+    const handleLeftTouchStart = (e) => {
+        leftStartX.current = e.touches[0].clientX
+        setActiveSlider('left')
+    }
+
+    const handleLeftTouchMove = (e) => {
+        if (activeSlider !== 'left') return
+        const currentX = e.touches[0].clientX
+        const diff = currentX - leftStartX.current
+        const maxWidth = 250 // approx container width - button width
+        const progress = Math.min(100, Math.max(0, (diff / maxWidth) * 100))
+        setLeftSlidePos(progress)
+    }
+
+    const handleLeftTouchEnd = () => {
+        if (leftSlidePos > threshold) {
+            handleEnterApp()
+        } else {
+            setLeftSlidePos(0)
+        }
+        setActiveSlider(null)
+    }
+
+    // Right slider (Silenzia)
+    const handleRightTouchStart = (e) => {
+        rightStartX.current = e.touches[0].clientX
+        setActiveSlider('right')
+    }
+
+    const handleRightTouchMove = (e) => {
+        if (activeSlider !== 'right') return
+        const currentX = e.touches[0].clientX
+        const diff = currentX - rightStartX.current
+        const maxWidth = 250
+        const progress = Math.min(100, Math.max(0, (diff / maxWidth) * 100))
+        setRightSlidePos(progress)
+    }
+
+    const handleRightTouchEnd = () => {
+        if (rightSlidePos > threshold) {
+            handleSilence()
+        } else {
+            setRightSlidePos(0)
+        }
+        setActiveSlider(null)
+    }
+
+    const handleEnterApp = () => {
+        AlarmSoundService.stop()
+        navigate('/sensors')
+    }
+
+    const handleSilence = () => {
+        AlarmSoundService.stop()
+        navigate(-1)
+    }
+
+    if (!alarmData) {
+        return (
+            <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
+                <p className="text-white/50">In attesa di allarme...</p>
+            </div>
+        )
+    }
+
+    const now = new Date(alarmData.timestamp)
+    const time = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 
     return (
-        <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#101622] text-white font-display">
-            <div className="absolute inset-0 z-0 h-full w-full">
-                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-[#101622]/90 to-[#101622] z-10"></div>
-                <div
-                    className="h-full w-full bg-cover bg-center bg-no-repeat blur-sm scale-105 opacity-60"
-                    style={{
-                        backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuC9LaEcqAbuLPqdyTUhF6cm4Uoe4F2EdtAfJJTjg9jkSijEXL86lJzSzq8AXs87aKTV95rvMFRaEDFkuh62ZOUv0oQE-EidGVeAcZEl-1t_0JFXnj7sx--RF5fUS9U8L38JPxOgy1cZbJo_rSkDlzmUhuRhf9xlhugm0YWNNJsyC_W09n9WlrnrVOxMLQql8q9YvSYhKQBapwRDY2MAP41tZ6fbEwZCyzlWlaWQtbMpVl0rj7NLsmGCZWskJFHPwZWZZJvC-EztYrBP")'
-                    }}
-                ></div>
+        <div className="min-h-screen bg-gradient-to-b from-[#0a0e1a] via-[#0f1419] to-[#0a0e1a] flex flex-col items-center justify-between px-4 py-6 relative overflow-hidden">
+            {/* Background */}
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl"></div>
+
+            {/* Top Badge */}
+            <div className="relative z-10 mt-6">
+                <div className="flex items-center gap-2 bg-red-600/20 border border-red-600/30 rounded-full px-4 py-2 backdrop-blur-md">
+                    <span className="material-symbols-outlined text-red-500 text-base">warning</span>
+                    <span className="text-red-100 font-bold text-xs tracking-wide">ALLARME RILEVATO</span>
+                </div>
             </div>
 
-            <div className="relative z-20 flex h-full flex-col justify-between p-6 pb-12">
-                <div className="flex flex-col items-center pt-12 animate-pulse">
-                    <div className="flex items-center gap-2 rounded-full bg-red-500/20 px-5 py-2 backdrop-blur-md border border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-                        <span className="material-symbols-outlined text-red-500 text-[22px] font-variation-settings-filled">warning</span>
-                        <span className="text-red-100 text-sm font-extrabold tracking-wider uppercase">ALLARME RILEVATO</span>
-                    </div>
-                    <h1 className="text-white text-[32px] font-extrabold tracking-tight text-center leading-tight mt-6 drop-shadow-lg">
-                        Movimento Sospetto
-                    </h1>
-                    <p className="text-gray-300 text-lg font-medium text-center mt-1">
-                        Telecamera Giardino • 20:42
-                    </p>
-                </div>
+            {/* Title */}
+            <div className="relative z-10 text-center mt-4">
+                <h1 className="text-white text-3xl sm:text-4xl font-bold mb-2">
+                    Movimento Sospetto
+                </h1>
+                <p className="text-white/60 text-base">
+                    {alarmData.zone_name} • {time}
+                </p>
+            </div>
 
-                <div className="flex flex-col items-center justify-center flex-1 py-4">
-                    <div className="relative flex items-center justify-center">
-                        <div className="absolute h-[340px] w-[340px] rounded-full border border-primary/5 bg-primary/5 animate-ping opacity-20"></div>
-                        <div className="absolute h-[260px] w-[260px] rounded-full border border-primary/20 bg-primary/10"></div>
-                        <div className="relative z-10 flex h-44 w-44 items-center justify-center rounded-full bg-[#111722] ring-4 ring-primary/40 shadow-[0_0_50px_-10px_rgba(19,91,236,0.6)] overflow-hidden">
-                            <span className="material-symbols-outlined text-white text-[64px] drop-shadow-md">gpp_maybe</span>
+            {/* Central Circle */}
+            <div className="relative z-10 flex items-center justify-center my-6">
+                <div className="relative w-64 h-64">
+                    <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 animate-ping"></div>
+                    <div className="absolute inset-3 rounded-full border-2 border-blue-500/40"></div>
+                    <div className="absolute inset-6 rounded-full border-2 border-blue-500/50"></div>
+
+                    <div className="absolute inset-12 rounded-full bg-gradient-to-b from-gray-900 to-black shadow-2xl flex items-center justify-center">
+                        <div className="bg-white rounded-xl p-4">
+                            <span className="material-symbols-outlined text-gray-900 text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                shield
+                            </span>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div className="mt-8 text-center">
-                        <p className="text-[22px] font-bold text-white leading-tight">Sistema di Allarme De Biasi</p>
-                        <p className="text-[#92a4c9] text-base mt-1">Rilevamento Persona</p>
+            {/* System Info */}
+            <div className="relative z-10 text-center mb-4">
+                <h2 className="text-white text-xl font-bold mb-1">
+                    Sistema di Allarme De Biasi
+                </h2>
+                <p className="text-white/50 text-sm">
+                    Rilevamento Persona
+                </p>
+            </div>
+
+            {/* Dual Sliders */}
+            <div className="relative z-10 w-full max-w-md flex flex-col gap-4 mb-4">
+                {/* Slider 1: Entra nell'app */}
+                <div className="relative">
+                    <div className="relative h-16 bg-blue-900/20 border-2 border-blue-500/30 rounded-full overflow-hidden">
+                        {/* Background fill */}
+                        <div
+                            className="absolute inset-0 bg-blue-500/40 transition-all duration-100"
+                            style={{ width: `${leftSlidePos}%` }}
+                        ></div>
+
+                        {/* Text */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="text-white font-bold text-sm">
+                                {leftSlidePos > threshold ? '✓ Rilascia!' : 'Scorri per Entrare nell\'app →'}
+                            </span>
+                        </div>
+
+                        {/* Draggable button */}
+                        <div
+                            className="absolute left-0 top-0 h-full w-16 bg-white rounded-full shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-transform"
+                            style={{
+                                transform: `translateX(${(leftSlidePos / 100) * 250}px)`,
+                                touchAction: 'none'
+                            }}
+                            onTouchStart={handleLeftTouchStart}
+                            onTouchMove={handleLeftTouchMove}
+                            onTouchEnd={handleLeftTouchEnd}
+                        >
+                            <span className="material-symbols-outlined text-blue-600 text-2xl">
+                                home
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-5 w-full max-w-[480px] mx-auto">
-                    <Link to="/cameras/live/1" className="group relative flex h-[72px] w-full items-center justify-between overflow-hidden rounded-full bg-primary p-1.5 shadow-lg shadow-primary/25 transition-transform active:scale-[0.98] cursor-pointer">
-                        <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-white text-primary shadow-sm z-10">
-                            <span className="material-symbols-outlined text-[32px] font-bold">videocam</span>
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center pl-10">
-                            <span className="text-[18px] font-bold text-white tracking-wide">Entra nell'app</span>
-                        </div>
-                        <div className="flex items-center pr-4 opacity-40">
-                            <span className="material-symbols-outlined text-white text-[24px]">chevron_right</span>
-                            <span className="material-symbols-outlined text-white text-[24px] -ml-3">chevron_right</span>
-                        </div>
-                    </Link>
+                {/* Slider 2: Silenzia */}
+                <div className="relative">
+                    <div className="relative h-16 bg-orange-900/20 border-2 border-orange-500/30 rounded-full overflow-hidden">
+                        {/* Background fill */}
+                        <div
+                            className="absolute inset-0 bg-orange-500/40 transition-all duration-100"
+                            style={{ width: `${rightSlidePos}%` }}
+                        ></div>
 
-                    <button
-                        onClick={() => navigate('/')}
-                        className="group relative flex h-[64px] w-full items-center justify-center gap-3 overflow-hidden rounded-full bg-[#2a303c]/80 backdrop-blur-md border border-white/5 hover:bg-[#2a303c] transition-colors active:scale-[0.98] cursor-pointer"
-                    >
-                        <span className="material-symbols-outlined text-red-400">notifications_off</span>
-                        <span className="text-base font-bold text-gray-200">Silenzia Allarme</span>
-                    </button>
+                        {/* Text */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="text-white font-bold text-sm">
+                                {rightSlidePos > threshold ? '✓ Rilascia!' : 'Scorri per Silenziare →'}
+                            </span>
+                        </div>
+
+                        {/* Draggable button */}
+                        <div
+                            className="absolute left-0 top-0 h-full w-16 bg-white rounded-full shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-transform"
+                            style={{
+                                transform: `translateX(${(rightSlidePos / 100) * 250}px)`,
+                                touchAction: 'none'
+                            }}
+                            onTouchStart={handleRightTouchStart}
+                            onTouchMove={handleRightTouchMove}
+                            onTouchEnd={handleRightTouchEnd}
+                        >
+                            <span className="material-symbols-outlined text-orange-600 text-2xl">
+                                volume_off
+                            </span>
+                        </div>
+                    </div>
                 </div>
-
             </div>
         </div>
     )

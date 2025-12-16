@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "552415749788",
+    "project_id": "debiasalarm",
+    "storage_bucket": "debiasalarm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:552415749788:android:351039f333330818d6ef59",
+        "android_client_info": {
+          "package_name": "com.debiasialarm.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMTU5CT_Ysc2SNa0o3iVhicQUhLgrHoiU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
